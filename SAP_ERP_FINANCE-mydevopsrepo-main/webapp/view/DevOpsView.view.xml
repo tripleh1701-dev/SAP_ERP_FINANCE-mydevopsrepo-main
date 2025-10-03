@@ -1,0 +1,7 @@
+<mvc:View controllerName="devopsproject.controller.DevOpsView"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+    <Page id="page" title="{i18n>title}">
+        <Text id="_IDGenText1" text="My DevOps Project!"></Text>
+    </Page>
+</mvc:View>

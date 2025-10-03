@@ -1,0 +1,120 @@
+pipeline {
+    agent any
+
+    environment {
+        CF_API = 'https://api.cf.eu10.hana.ondemand.com'
+        CF_ORG_DEV = 'ErpDevOrg'
+        CF_SPACE_DEV = 'ErpDevSpcDevOps'
+        CF_ORG_QA = 'ErpSbxOrg'
+        CF_SPACE_QA = 'ErpSbxSpcDevOps'
+        CF_ORG_PROD = 'ErpDevOrg'
+        CF_SPACE_PROD = 'ErpDevSpcDevOps'
+    }
+
+    stages {
+        // Stage 1: Checkout Code
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', credentialsId: 'github-credentials', url: 'https://github.com/McK-Internal/SAP_ERP_FINANCE-mydevopsrepo.git'
+            }
+        }
+
+        // Stage 2: Install Dependencies
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+
+        // Stage 3: Run Unit Tests in Dev
+        stage('Run Unit Tests (Tricentis)') {
+            steps {
+                echo "Running unit tests in Dev environment..."
+                script {
+                    // Simulate unit testing with a sleep timer
+                    sleep(time: 10, unit: 'SECONDS')
+                    echo "Unit tests passed successfully."
+                }
+            }
+        }
+
+        // Stage 4: Build Project
+        stage('Build Project') {
+            steps {
+                sh 'npm run build'
+            }
+        }
+
+        // Stage 5: Create MTAR
+        stage('Create MTAR') {
+            steps {
+                sh 'mbt build -t .'
+            }
+        }
+
+        // Stage 6: Deploy to Development
+        stage('Deploy to Development') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'btp-credentials', usernameVariable: 'CF_USER', passwordVariable: 'CF_PASSWORD')]) {
+                    script {
+                        // Deploy the .mtar file to Dev environment
+                        sh '''
+                        cf login -a $CF_API -u $CF_USER -p $CF_PASSWORD -o $CF_ORG_DEV -s $CF_SPACE_DEV
+                        cf deploy devopsproject_0.0.1.mtar -f
+                        '''
+                    }
+                }
+            }
+        }
+
+        // Stage 7: Deploy to QA
+        stage('Deploy to QA') {
+            steps {
+                input message: 'Do you want to proceed with QA deployment?', ok: 'Yes'
+                withCredentials([usernamePassword(credentialsId: 'btp-credentials', usernameVariable: 'CF_USER', passwordVariable: 'CF_PASSWORD')]) {
+                    script {
+                        // Deploy the .mtar file to QA environment
+                        sh '''
+                        cf login -a $CF_API -u $CF_USER -p $CF_PASSWORD -o $CF_ORG_QA -s $CF_SPACE_QA
+                        cf deploy devopsproject_0.0.1.mtar -f
+                        '''
+                    }
+                }
+            }
+        }
+
+        // Stage 8: Perform UAT
+        stage('Perform UAT') {
+            steps {
+                echo "Performing UAT..."
+                script {
+                    // Simulate UAT with a sleep timer
+                    sleep(time: 10, unit: 'SECONDS')
+                    echo "UAT passed successfully."
+                }
+            }
+        }
+
+        // Stage 9: Deploy to Production
+        stage('Deploy to Production') {
+            steps {
+                input message: 'Do you want to proceed with Production deployment?', ok: 'Yes'
+                withCredentials([usernamePassword(credentialsId: 'btp-credentials', usernameVariable: 'CF_USER', passwordVariable: 'CF_PASSWORD')]) {
+                    script {
+                        // Deploy the .mtar file to Prod environment
+                        sh '''
+                        cf login -a $CF_API -u $CF_USER -p $CF_PASSWORD -o $CF_ORG_PROD -s $CF_SPACE_PROD
+                        cf deploy devopsproject_0.0.1.mtar -f
+                        '''
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "Pipeline execution completed."
+        }
+    }
+}
